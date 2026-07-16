@@ -12,15 +12,12 @@ const invoiceSchema = new mongoose.Schema({
         },
         originalFileName: {
             type: String,
-            required: true,
         },
         mimeType: {
             type: String,
-            required: true,
         },
         fileSize: {
             type: Number,
-            required: true,
         },
 
         // INVOICE INFO
