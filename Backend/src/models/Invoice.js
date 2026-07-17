@@ -10,14 +10,29 @@ const invoiceSchema = new mongoose.Schema({
             ref: 'User',
             required: true,
         },
-        originalFileName: {
-            type: String,
-        },
-        mimeType: {
-            type: String,
-        },
-        fileSize: {
-            type: Number,
+        
+
+        // METADATA INFO OF FILE 
+        file: {
+            originalName: {
+                type: String 
+            },
+            mimeType: {
+                type: String 
+            },
+            size: {
+                type: Number
+            },
+            s3Key: { 
+                type: String 
+            },      
+            bucket: {
+                type: String 
+            },    
+            uploadedAt: {
+                type: Date 
+            },
+            
         },
 
         // INVOICE INFO
