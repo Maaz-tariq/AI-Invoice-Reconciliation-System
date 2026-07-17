@@ -2,6 +2,8 @@
 const AppError = require('../utils/AppError');
 const invoiceService = require('../services/invoiceService')
 
+const s3Service = require('../services/s3Services');
+
 const createInvoice = async (req, res, next) => {
     try {
         const invoice = await invoiceService.createInvoice(req.body, req.user.id);
@@ -75,4 +77,22 @@ const deleteInvoice = async (req, res, next) => {
     }
 };
 
-module.exports = { createInvoice, getInvoices, getInvoiceById, updateInvoice, deleteInvoice };
+
+
+
+const getUploadUrl = async (req, res, next) => {
+    try {
+        const { fileName, contentType } = req.body;
+        const result = await s3Service.generateUploadUrl({ fileName, contentType });
+
+        res.status(200).json({
+            success: true,
+            data: result,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+module.exports = { createInvoice, getInvoices, getInvoiceById, updateInvoice, deleteInvoice, getUploadUrl };

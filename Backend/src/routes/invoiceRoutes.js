@@ -6,6 +6,7 @@ const authorize = require('../middleware/roleMiddleware');
 const ROLES = require('../constants/roles');
 const { validateCreateInvoice, validateUpdateInvoice } = require('../validations/invoiceValidation');
 
+const { getUploadUrl } = require('../controllers/invoiceController');
 
 const {
     createInvoice,
@@ -49,6 +50,14 @@ router.patch(
     validateUpdateInvoice,
     updateInvoice
 );
+
+// UPLOAD INVOICE TO AWS
+router.post(
+    '/upload-url',
+    auth,
+    authorize(ROLES.ADMIN, ROLES.FINANCE, ROLES.EMPLOYEE),
+    getUploadUrl
+)
 
 // DELETE INVOICE - CAN ONLY BE DONE BY ADMIN
 router.delete(
