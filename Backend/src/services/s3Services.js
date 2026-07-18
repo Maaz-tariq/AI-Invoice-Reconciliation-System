@@ -1,5 +1,6 @@
 const { PutObjectCommand } = require('@aws-sdk/client-s3'); // This to put data into the bucket
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner'); // This is to get temporary access to the bucket
+const { DeleteObjectCommand } = require('@aws-sdk/client-s3');  // Ye delete karta hai bucket se
 
 const { v4: uuidv4 } = require('uuid');
 
@@ -10,7 +11,7 @@ const AppError = require('../utils/AppError');
 const ALLOWED_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];  // Tell what all invoice types are allowed
 const URL_EXPIRY_SECONDS = 300; 
 
-const getFileExtension = (mimeType) => { // Return the invoice extension
+const getFileExtension = (mimeType) => { // Invoice extension deta hai taaki object key me use kar sake
     const map = {
         'application/pdf': 'pdf',
         'image/jpeg': 'jpg',
@@ -51,7 +52,23 @@ const generateUploadUrl = async ({ fileName, contentType }) => {
         expiresIn: URL_EXPIRY_SECONDS,
     });
 
-    return { uploadUrl, key };
+    return {
+        uploadUrl,
+        key,
+        expiresIn: URL_EXPIRY_SECONDS,
+        contentType,
+    };
 };
 
-module.exports = { generateUploadUrl, ALLOWED_MIME_TYPES };
+
+
+const deleteObject = async (key) => {
+    const command = new DeleteObjectCommand({
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Key: key,
+    });
+
+    await s3Client.send(command);
+};
+
+module.exports = { generateUploadUrl, deleteObject, ALLOWED_MIME_TYPES };
