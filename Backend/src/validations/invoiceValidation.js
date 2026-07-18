@@ -11,50 +11,61 @@ const ALLOWED_FIELDS = [
     'totalAmount',
 ];
 
+
 const validateCreateInvoice = (req, res, next) => {
-    const { vendor, invoiceNumber, invoiceDate, currency, subtotal, tax, totalAmount } = req.body;
+    const ALLOWED_FIELDS = [
+        'vendor', 'invoiceNumber', 'invoiceDate', 'currency',
+        'subtotal', 'tax', 'totalAmount',
+        's3Key', 'originalName', 'mimeType', 'size',
+    ];
 
-    if (!vendor || typeof vendor !== 'string') {
-        return next(new AppError('Vendor is required and must be a string', 400));
+    const cleaned = {};
+    for (const field of ALLOWED_FIELDS) {
+        if (req.body[field] !== undefined) cleaned[field] = req.body[field];
     }
 
-    if (!invoiceNumber || typeof invoiceNumber !== 'string') {
-        return next(new AppError('Invoice number is required and must be a string', 400));
-    }
-
-    if (!invoiceDate || isNaN(Date.parse(invoiceDate))) {
-        return next(new AppError('A valid invoice date is required', 400));
-    }
-
-    if (!currency || typeof currency !== 'string') {
-        return next(new AppError('Currency is required and must be a string', 400));
-    }
-
-    if (subtotal === undefined || typeof subtotal !== 'number' || subtotal < 0) {
-        return next(new AppError('Subtotal is required and must be a non-negative number', 400));
-    }
-
-    if (tax === undefined || typeof tax !== 'number' || tax < 0) {
-        return next(new AppError('Tax is required and must be a non-negative number', 400));
-    }
-
-    if (totalAmount === undefined || typeof totalAmount !== 'number' || totalAmount < 0) {
-        return next(new AppError('Total amount is required and must be a non-negative number', 400));
-    }
-
-    // CLIENT SE WAHI DETAILS LENGE JO REQUIRED HAI JAISE YE
-    // NAAKI JAISE approvalStatus, uploadBy, 
-    req.body = {
-        vendor,
-        invoiceNumber,
-        invoiceDate,
-        currency,
-        subtotal,
-        tax,
-        totalAmount,
-    };
-
+    req.body = cleaned;
     next();
+};
+
+
+// invoice.service.js — required-field checks now happen HERE, inside rollback coverage
+const createInvoice = async (data, userId) => {
+    const { vendor, invoiceNumber, invoiceDate, currency, subtotal, tax, totalAmount, s3Key, originalName, mimeType, size } = data;
+
+    try {
+        if (!vendor) throw new AppError('Vendor is required', 400);
+
+        if (!invoiceNumber) throw new AppError('Invoice number is required', 400);
+
+        if (!invoiceDate || isNaN(Date.parse(invoiceDate))) throw new AppError('Valid invoice date is required', 400);
+
+        if (subtotal === undefined || typeof subtotal !== 'number') throw new AppError('Subtotal is required', 400);
+
+        if (tax === undefined || typeof tax !== 'number') throw new AppError('Tax is required', 400);
+
+        if (totalAmount === undefined || typeof totalAmount !== 'number') throw new AppError('Total amount is required', 400);
+        
+        if (!s3Key) throw new AppError('s3Key is required', 400);
+
+        const existing = await Invoice.findOne({ vendor, invoiceNumber });
+        if (existing) {
+            throw new AppError('An invoice with this vendor and invoice number already exists', 409);
+        }
+
+        const invoice = await Invoice.create({
+            vendor, invoiceNumber, invoiceDate, currency, subtotal, tax, totalAmount,
+            uploadedBy: userId,
+            file: { originalName, mimeType, size, s3Key, bucket: process.env.AWS_BUCKET_NAME, uploadedAt: new Date() },
+        });
+
+        return invoice;
+    } catch (error) {
+        if (s3Key) {
+            await s3Service.deleteObject(s3Key).catch(() => {});
+        }
+        throw error;
+    }
 };
 
 const validateUpdateInvoice = (req, res, next) => {
